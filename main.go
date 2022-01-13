@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -510,6 +511,31 @@ func fileUpload(eid string, fName string) {
 
 // This is actually going to loop through stuff and use multiple API requests.
 func bigUpload(eid string, fName string) {
+	data, err := os.ReadFile(fName)
+
+	var hostID string
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	hosts := &Hosts{}
+
+	merr := xml.Unmarshal(data, &hosts)
+
+	if merr != nil {
+		fmt.Println(err)
+	}
+
+	for i := 0; i < len(hosts.Hosts); i++ {
+		for a := range hosts.Hosts[i].Addresses {
+			if hosts.Hosts[i].Addresses[a].AddrType != "mac" {
+				hostID = newHost(eid, hosts.Hosts[i].Addresses[a].Addr, "", "", "", "", false, false)
+				fmt.Println("This is coming fromt the thing i made.")
+				fmt.Println(hostID)
+			}
+		}
+	}
 
 }
 
@@ -530,7 +556,7 @@ func getHost(hid string) {
 }
 
 // POST https://pentest.ws/api/v1/e/{eid}/hosts
-func newHost(eid string, hostIP string, hostOS string, hostType string, hostLabel string, hostname string, hostShell bool, hostOwned bool) {
+func newHost(eid string, hostIP string, hostOS string, hostType string, hostLabel string, hostname string, hostShell bool, hostOwned bool) string {
 	url := apiBase + apiEng + "/" + eid + apiHost
 	method := "POST"
 	var shell string
@@ -560,7 +586,8 @@ func newHost(eid string, hostIP string, hostOS string, hostType string, hostLabe
 		fmt.Println(err)
 	}
 
-	makeRequest(url, method, payload)
+	sb := makeRequest(url, method, payload)
+	return sb
 }
 
 // PUT https://pentest.ws/api/v1/hosts/{hid}
@@ -669,7 +696,7 @@ func deletePort(pid string) {
 	makeRequest(url, method, payload)
 }
 
-func makeRequest(url string, reqMethod string, payload []byte) {
+func makeRequest(url string, reqMethod string, payload []byte) string {
 	client := &http.Client{}
 	req, err := http.NewRequest(reqMethod, url, bytes.NewBuffer(payload))
 
@@ -694,5 +721,5 @@ func makeRequest(url string, reqMethod string, payload []byte) {
 
 	sb := string(body)
 	fmt.Println(sb)
-
+	return sb
 }
